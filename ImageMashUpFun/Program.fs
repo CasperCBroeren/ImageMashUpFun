@@ -1,8 +1,9 @@
 ﻿open FSharp.Data 
 open System
-open System.Net
+open Microsoft.FSharp.Control.CommonExtensions 
 open System.IO
 open System.Drawing
+open System.Threading.Tasks
 
 [<Literal>]
 let sourceUrl = @"https://www.vicompany.nl/vi-company"
@@ -22,24 +23,37 @@ module Imaging =
             let aImage = new Bitmap(aValue)
             let bImage = new Bitmap(bValue)
             let w, h = aImage.Width, aImage.Height
+            let target = new Bitmap(w, h)
             for x in 0 .. (w-1) do
                 for y in 0 .. (h-1) do
                     let origin = aImage.GetPixel(x,y)
                     let noise  = bImage.GetPixel(x,y)
                     let result = colorMin( origin, noise)
-                    aImage.SetPixel(x,y, result)
-            let resultPath = bValue.Replace(".jpg", String.Empty)+"_mix.jpg"
+                    target.SetPixel(x,y, result)
+            let resultPath = aValue.Replace(".jpg", String.Empty)+"_mix.jpg"
             printfn "Result at '%s'" resultPath
-            aImage.Save(resultPath)
+            target.Save(resultPath)
         | _,_ -> printfn "Empty a or b"
 
 module Web =
-    let webClient = new WebClient()
+    open System.Net
+
     type ViCoTeam = HtmlProvider<sourceUrl>
-    let downloadImage(url:string, fileName:string, folder:string) =    
-        let destinationPath = Path.Combine(folder, fileName + ".jpg")
-        webClient.DownloadFile(url, destinationPath) |> ignore
-        Some destinationPath
+  
+    let downloadImage(url:string , fileName:string) =            
+        async {
+              let destinationPath = Path.Combine(saveToPath, fileName + ".jpg")
+              let req = WebRequest.Create(Uri(url)) 
+              use! resp = req.AsyncGetResponse()  
+              use stream = resp.GetResponseStream()  
+              use ms = new MemoryStream()
+              stream.CopyTo(ms)
+              File.Delete(destinationPath)
+              File.WriteAllBytes(destinationPath, ms.ToArray())
+           
+              return Some destinationPath 
+        }  
+        
  
     let getData() = 
         let data = ViCoTeam.GetSample()
@@ -52,8 +66,11 @@ let main argv =
     let colleagues = Web.getData()
     let sun = Some "sun.jpg"
     Directory.CreateDirectory(saveToPath) |> ignore
-    for (name, url) in colleagues do 
-        let dowloadedAt = Web.downloadImage(url, name, saveToPath)  
-        Imaging.mixTwoImages(sun, dowloadedAt)   
-
+    let images() = colleagues
+                    |> List.map(fun(name, url) -> Web.downloadImage(url, name))
+                    |> Async.Parallel
+                    |> Async.RunSynchronously   
+    images()
+        |> Array.iter(fun item -> Imaging.mixTwoImages(item, sun))
     Console.ReadKey().KeyChar |> int 
+   
