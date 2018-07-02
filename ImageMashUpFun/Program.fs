@@ -9,12 +9,27 @@ open System.Threading.Tasks
 let sourceUrl = @"https://www.vicompany.nl/vi-company"
 let saveToPath = ".\\images"
 
+let rec hcf (a:byte) (b:byte) =
+    if a = byte(0) then b
+    elif a<b then hcf a (b - a)
+    else hcf (a - b) b
+
+let rec avg (a) (b) =
+    int(a+b)/2
+    
 module Imaging = 
+
     let colorMax (color1:Color, color2:Color) = 
         Color.FromArgb(int color1.A,int (max color1.R color2.R),int (max color1.G color2.G),int (max color1.B color2.B))
 
     let colorMin(color1:Color, color2:Color) = 
         Color.FromArgb(int color1.A,int (min color1.R color2.R),int (min color1.G color2.G),int (min color1.B color2.B))
+    
+    let colorHighestComonFactor(color1:Color, color2:Color) = 
+        Color.FromArgb(int color1.A, int (hcf color1.R color2.R), int (hcf color1.G color2.G), int (hcf color1.B color2.B))
+
+    let colorAvergage(color1:Color, color2:Color) = 
+        Color.FromArgb(int color1.A, int (avg color1.R color2.R), int (avg color1.G color2.G), int (avg color1.B color2.B))
 
     let mixTwoImages (imageA : string option, imageB:string option) = 
         match imageA,imageB  with         
@@ -28,7 +43,7 @@ module Imaging =
                 for y in 0 .. (h-1) do
                     let origin = aImage.GetPixel(x,y)
                     let noise  = bImage.GetPixel(x,y)
-                    let result = colorMin( origin, noise)
+                    let result = colorAvergage( origin, noise)
                     target.SetPixel(x,y, result)
             let resultPath = aValue.Replace(".jpg", String.Empty)+"_mix.jpg"
             printfn "Result at '%s'" resultPath
