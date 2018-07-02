@@ -3,6 +3,7 @@ Fun with F# and images. So I like F# because it's a dotNet but with a new paradi
 - F# data; a package which allows at design time to interact with a data URL
 - Patern matching; a way of handeling cases and checking for aspects of your data. 
 - Async in F#; a bit harder then C# TAP but more expressive 
+- workflow/pipelying; Instead of declarative processing your flow, 'piping' results after each other is verry comon in F#. Partially because it's more immutable focused language
 
 So the image fun is just modifing pixel data for hillarious effects. Up on today I only got a min and max of two images. But I try to come up with other ways of modifying images
 
